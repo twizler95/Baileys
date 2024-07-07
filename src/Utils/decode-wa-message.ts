@@ -18,9 +18,9 @@ export function decodeMessageNode(
 	meId: string,
 	meLid: string
 ) {
-	let msgType: MessageType
-	let chatId: string
-	let author: string
+	let msgType: MessageType = 'chat';
+	let chatId: string = '';
+	let author: string = '';
 
 	const msgId = stanza.attrs.id
 	const from = stanza.attrs.from
