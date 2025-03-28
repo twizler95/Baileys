@@ -384,6 +384,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 								groupData = await groupMetadata(jid)
 							}
 
+							logger.debug({ groupData }, 'TESTING Group Data')
+
 							return groupData
 						})(),
 						(async() => {
