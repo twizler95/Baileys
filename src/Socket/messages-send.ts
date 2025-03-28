@@ -328,6 +328,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		const isStatus = jid === statusJid
 		const isLid = server === 'lid'
 
+		logger.debug({ jid }, 'sending jid')
+
+
 		msgId = msgId || generateMessageIDV2(sock.user?.id)
 		useUserDevicesCache = useUserDevicesCache !== false
 		useCachedGroupMetadata = useCachedGroupMetadata !== false && !isStatus
@@ -343,6 +346,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 				message
 			}
 		}
+
+		logger.debug({ destinationJid }, 'sending destination jid')
 
 		const extraAttrs = {}
 
@@ -414,6 +419,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 					const senderKeyJids: string[] = []
 					// ensure a connection is established with every device
+
+					logger.debug({ devices }, 'sending devices')
 					for(const { user, device } of devices) {
 						const jid = jidEncode(user, isLid ? 'lid' : 's.whatsapp.net', device)
 						if(!senderKeyMap[jid] || !!participant) {
