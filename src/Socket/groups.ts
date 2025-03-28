@@ -338,17 +338,14 @@ export const extractGroupMetadata = (result: BinaryNode) => {
 	const eph = getBinaryNodeChild(group, 'ephemeral')?.attrs.expiration
 	const memberAddMode = getBinaryNodeChildString(group, 'member_add_mode') === 'all_member_add'
 
-	console.log("TEST GROUP : " + JSON.stringify(group));
-	console.log("TEST GROUP PARTICIPANT: " + JSON.stringify(getBinaryNodeChildren(group, 'participant')));
-
 	const metadata: GroupMetadata = {
 		id: groupId,
 		subject: group.attrs.subject,
-		subjectOwner: group.attrs.s_o,
+		subjectOwner: group.attrs.s_o_pn || group.attrs.s_o,
 		subjectTime: +group.attrs.s_t,
 		size: getBinaryNodeChildren(group, 'participant').length,
 		creation: +group.attrs.creation,
-		owner: group.attrs.creator ? jidNormalizedUser(group.attrs.creator) : undefined,
+		owner: group.attrs.creator ? jidNormalizedUser(group.attrs.creator_pn || group.attrs.creator) : undefined,
 		desc,
 		descId,
 		linkedParent: getBinaryNodeChild(group, 'linked_parent')?.attrs.jid || undefined,
