@@ -337,6 +337,10 @@ export const extractGroupMetadata = (result: BinaryNode) => {
 	const groupId = group.attrs.id.includes('@') ? group.attrs.id : jidEncode(group.attrs.id, 'g.us')
 	const eph = getBinaryNodeChild(group, 'ephemeral')?.attrs.expiration
 	const memberAddMode = getBinaryNodeChildString(group, 'member_add_mode') === 'all_member_add'
+
+	console.log("TEST GROUP : " + JSON.stringify(group));
+	console.log("TEST GROUP PARTICIPANT: " + JSON.stringify(getBinaryNodeChildren(group, 'participant')));
+
 	const metadata: GroupMetadata = {
 		id: groupId,
 		subject: group.attrs.subject,
