@@ -373,6 +373,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					const [groupData, senderKeyMap] = await Promise.all([
 						(async() => {
 							let groupData = useCachedGroupMetadata && cachedGroupMetadata ? await cachedGroupMetadata(jid) : undefined
+
+							logger.debug({ groupData }, '[NICKDEBUG] cached groupData');
+
 							if(groupData && Array.isArray(groupData?.participants)) {
 								logger.trace({ jid, participants: groupData.participants.length }, 'using cached group metadata')
 							} else if(!isStatus) {
@@ -391,6 +394,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						})()
 					])
 
+					logger.debug({ groupData }, '[NICKDEBUG] groupData');
+
 					if(!participant) {
 						const participantsList = (groupData && !isStatus) ? groupData.participants.map(p => p.id) : []
 						if(isStatus && statusJidList) {
@@ -400,6 +405,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						const additionalDevices = await getUSyncDevices(participantsList, !!useUserDevicesCache, false)
 						devices.push(...additionalDevices)
 					}
+
+					logger.debug({ devices }, '[NICKDEBUG] devices');
 
 					const patched = await patchMessageBeforeSending(message, devices.map(d => jidEncode(d.user, isLid ? 'lid' : 's.whatsapp.net', d.device)))
 					const bytes = encodeWAMessage(patched)
@@ -415,6 +422,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					const senderKeyJids: string[] = []
 					// ensure a connection is established with every device
 					for(const { user, device } of devices) {
+						
 						const jid = jidEncode(user, isLid ? 'lid' : 's.whatsapp.net', device)
 						if(!senderKeyMap[jid] || !!participant) {
 							senderKeyJids.push(jid)
