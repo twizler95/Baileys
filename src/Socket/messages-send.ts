@@ -374,8 +374,6 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						(async() => {
 							let groupData = useCachedGroupMetadata && cachedGroupMetadata ? await cachedGroupMetadata(jid) : undefined
 
-							logger.debug({ groupData }, '[NICKDEBUG] cached groupData');
-
 							if(groupData && Array.isArray(groupData?.participants)) {
 								logger.trace({ jid, participants: groupData.participants.length }, 'using cached group metadata')
 							} else if(!isStatus) {
@@ -406,8 +404,6 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						devices.push(...additionalDevices)
 					}
 
-					logger.debug({ devices }, '[NICKDEBUG] devices');
-
 					const patched = await patchMessageBeforeSending(message, devices.map(d => jidEncode(d.user, isLid ? 'lid' : 's.whatsapp.net', d.device)))
 					const bytes = encodeWAMessage(patched)
 
@@ -424,6 +420,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					for(const { user, device } of devices) {
 						
 						const jid = jidEncode(user, isLid ? 'lid' : 's.whatsapp.net', device)
+
+						logger.debug({ jid }, '[NICKDEBUG] groupData');
+
 						if(!senderKeyMap[jid] || !!participant) {
 							senderKeyJids.push(jid)
 							// store that this person has had the sender keys sent to them
@@ -433,6 +432,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 					// if there are some participants with whom the session has not been established
 					// if there are, we re-send the senderkey
+					logger.debug({ devices, senderKeyMap }, '[NICKDEBUG] devices & senderKeyMap');
+					
 					if(senderKeyJids.length) {
 						logger.debug({ senderKeyJids }, 'sending new sender key')
 
@@ -490,6 +491,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 					await assertSessions(allJids, false)
 
+					logger.debug({ meJids, otherJids }, '[NICKDEBUG] meJids & otherJids');
+
 					const [
 						{ nodes: meNodes, shouldIncludeDeviceIdentity: s1 },
 						{ nodes: otherNodes, shouldIncludeDeviceIdentity: s2 }
@@ -497,6 +500,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						createParticipantNodes(meJids, meMsg, extraAttrs),
 						createParticipantNodes(otherJids, message, extraAttrs)
 					])
+
+					logger.debug({ meNodes, otherNodes }, '[NICKDEBUG] meNodes & otherNodes');
+
 					participants.push(...meNodes)
 					participants.push(...otherNodes)
 
