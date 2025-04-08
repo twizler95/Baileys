@@ -392,7 +392,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						})()
 					])
 
-					logger.debug({ groupData }, '[NICKDEBUG] groupData');
+					logger.debug({ groupData, senderKeyMap, participant }, '[NICKDEBUG] groupData & initial senderKeyMap');
 
 					if(!participant) {
 						const participantsList = (groupData && !isStatus) ? groupData.participants.map(p => p.id) : []
@@ -421,13 +421,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						
 						const jid = jidEncode(user, isLid ? 'lid' : 's.whatsapp.net', device)
 
-						logger.debug({ jid }, '[NICKDEBUG] groupData');
+						logger.debug({ jid }, '[NICKDEBUG] jid');
 
-						if(!senderKeyMap[jid] || !!participant) {
+						// if(!senderKeyMap[jid] || !!participant) {
 							senderKeyJids.push(jid)
 							// store that this person has had the sender keys sent to them
 							senderKeyMap[jid] = true
-						}
+						// }
 					}
 
 					// if there are some participants with whom the session has not been established
@@ -491,8 +491,6 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 					await assertSessions(allJids, false)
 
-					logger.debug({ meJids, otherJids }, '[NICKDEBUG] meJids & otherJids');
-
 					const [
 						{ nodes: meNodes, shouldIncludeDeviceIdentity: s1 },
 						{ nodes: otherNodes, shouldIncludeDeviceIdentity: s2 }
@@ -500,8 +498,6 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						createParticipantNodes(meJids, meMsg, extraAttrs),
 						createParticipantNodes(otherJids, message, extraAttrs)
 					])
-
-					logger.debug({ meNodes, otherNodes }, '[NICKDEBUG] meNodes & otherNodes');
 
 					participants.push(...meNodes)
 					participants.push(...otherNodes)
