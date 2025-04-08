@@ -604,7 +604,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 	const handleReceipt = async(node: BinaryNode) => {
 		const { attrs, content } = node
 		const isLid = attrs.from.includes('lid')
-		const isNodeFromMe = areJidsSameUser(attrs.participant || attrs.from, isLid ? authState.creds.me?.lid : authState.creds.me?.id)
+		const isNodeFromMe = areJidsSameUser(attrs.participant_pn || attrs.participant || attrs.from, isLid ? authState.creds.me?.lid : authState.creds.me?.id)
 		const remoteJid = !isNodeFromMe || isJidGroup(attrs.from) ? attrs.from : attrs.recipient
 		const fromMe = !attrs.recipient || (attrs.type === 'retry' && isNodeFromMe)
 
@@ -612,7 +612,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 			remoteJid,
 			id: '',
 			fromMe,
-			participant: attrs.participant
+			participant: attrs.participant_pn || attrs.participant
 		}
 
 		if(shouldIgnoreJid(remoteJid) && remoteJid !== '@s.whatsapp.net') {
