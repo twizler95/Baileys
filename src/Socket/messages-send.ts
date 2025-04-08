@@ -423,11 +423,11 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 						logger.debug({ jid }, '[NICKDEBUG] jid');
 
-						// if(!senderKeyMap[jid] || !!participant) {
+						if(!senderKeyMap[jid] || !!participant) {
 							senderKeyJids.push(jid)
 							// store that this person has had the sender keys sent to them
 							senderKeyMap[jid] = true
-						// }
+						}
 					}
 
 					// if there are some participants with whom the session has not been established
