@@ -18,6 +18,7 @@ export function decodeMessageNode(
 	meId: string,
 	meLid: string
 ) {
+	
 	let msgType: MessageType
 	let chatId: string
 	let author: string
@@ -122,6 +123,8 @@ export const decryptMessageNode = (
 	repository: SignalRepository,
 	logger: Logger
 ) => {
+	logger.debug({ stanza, meId, meLid }, '[NICKDEBUG] decryptMessageNode');
+
 	const { fullMessage, author, sender } = decodeMessageNode(stanza, meId, meLid)
 	return {
 		fullMessage,
