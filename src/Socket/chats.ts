@@ -599,7 +599,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 	const handlePresenceUpdate = ({ tag, attrs, content }: BinaryNode) => {
 		let presence: PresenceData | undefined
 		const jid = attrs.from
-		const participant = attrs.participant || attrs.from
+		const participant = attrs.participant_pn || attrs.participant || attrs.from
 
 		if(shouldIgnoreJid(jid) && jid !== '@s.whatsapp.net') {
 			return

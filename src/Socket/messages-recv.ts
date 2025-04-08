@@ -103,6 +103,10 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 			stanza.attrs.participant = attrs.participant
 		}
 
+		if(!!attrs.participant_pn) {
+			stanza.attrs.participant = attrs.participant_pn
+		}
+
 		if(!!attrs.recipient) {
 			stanza.attrs.recipient = attrs.recipient
 		}
@@ -197,6 +201,10 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
 				if(node.attrs.participant) {
 					receipt.attrs.participant = node.attrs.participant
+				}
+
+				if(node.attrs.participant_pn) {
+					receipt.attrs.participant = node.attrs.participant_pn
 				}
 
 				if(retryCount > 1 || forceIncludeKeys) {
@@ -384,7 +392,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
 			break
 		case 'w:gp2':
-			handleGroupNotification(node.attrs.participant, child, result)
+			handleGroupNotification(node.attrs.participant_pn || node.attrs.participant, child, result)
 			break
 		case 'mediaretry':
 			const event = decodeMediaRetryNode(node)
@@ -701,15 +709,15 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 					async() => {
 						const msg = await processNotification(node)
 						if(msg) {
-							const fromMe = areJidsSameUser(node.attrs.participant || remoteJid, authState.creds.me!.id)
+							const fromMe = areJidsSameUser(node.attrs.participant_pn || node.attrs.participant || remoteJid, authState.creds.me!.id)
 							msg.key = {
 								remoteJid,
 								fromMe,
-								participant: node.attrs.participant,
+								participant: node.attrs.participant_pn || node.attrs.participant,
 								id: node.attrs.id,
 								...(msg.key || {})
 							}
-							msg.participant ??= node.attrs.participant
+							msg.participant ??= node.attrs.participant_pn || node.attrs.participant
 							msg.messageTimestamp = +node.attrs.t
 
 							const fullMsg = proto.WebMessageInfo.fromObject(msg)
