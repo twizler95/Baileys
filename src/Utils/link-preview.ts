@@ -101,10 +101,16 @@ export const getUrlInfo = async(
 		}
 
 		let response = await axios.get(detectedUrl!, opts.fetchOpts);
-		
+
+		const rawHeaders = response.headers;
+
+		const headers: Record<string, string> = Object.fromEntries(
+			Object.entries(rawHeaders).map(([key, value]) => [key, String(value)])
+		);
+
 		const info = getPreviewFromContent({
 			data: response.data,
-			headers: response.headers,
+			headers,
 			url: detectedUrl
 		});
 
