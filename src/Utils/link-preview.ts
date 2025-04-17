@@ -133,7 +133,6 @@ export const getUrlInfo = async(
 			headers: opts.fetchOpts as {}
 		})*/
 
-		const
 		if(info && 'title' in info && info.title) {
 			const [image] = info.images
 
