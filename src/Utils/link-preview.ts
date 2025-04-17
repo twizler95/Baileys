@@ -101,9 +101,12 @@ export const getUrlInfo = async(
 		}
 
 		let response = await axios.get(detectedUrl!, opts.fetchOpts);
-		response.url = detectedUrl;
 		
-		const info = getPreviewFromContent(response);
+		const info = getPreviewFromContent({
+			data: response.data,
+			headers: response.headers,
+			url: detectedUrl
+		});
 
 			/*
 		const info = await getLinkPreview(previewLink, {
