@@ -108,7 +108,7 @@ export const getUrlInfo = async(
 			Object.entries(rawHeaders).map(([key, value]) => [key, String(value)])
 		);
 
-		const info = getPreviewFromContent({
+		const info = await getPreviewFromContent({
 			data: response.data,
 			headers,
 			url: detectedUrl
