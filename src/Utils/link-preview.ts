@@ -76,6 +76,10 @@ export const getUrlInfo = async(
 			headers: opts.fetchOpts as {}
 		})
 		if(info && 'title' in info && info.title) {
+			if (info.title.toLowerCase() == 'error') {
+				throw new Error('Failed to fetch link preview')
+			}
+			
 			const [image] = info.images
 
 			const urlInfo: WAUrlInfo = {
