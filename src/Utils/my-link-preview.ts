@@ -54,16 +54,16 @@ export const myGetLinkPreview = async(
         const title =
             $('meta[property="og:title"]').attr('content') ||
             $('title').text() ||
-            null;
+            undefined;
   
         const description =
             $('meta[property="og:description"]').attr('content') ||
             $('meta[name="description"]').attr('content') ||
-            null;
+            undefined;
   
         const image =
             $('meta[property="og:image"]').attr('content') ||
-            null;
+            undefined;
   
         const faviconRel =
             $('link[rel="icon"]').attr('href') ||
