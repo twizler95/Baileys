@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto'
 import { promises as fs } from 'fs'
 import { type Transform } from 'stream'
 import { proto } from '../../WAProto'
+import { myGetLinkPreview } from './my-link-preview'
 import { MEDIA_KEYS, URL_REGEX, WA_DEFAULT_EPHEMERAL } from '../Defaults'
 import {
 	AnyMediaMessageContent,
@@ -75,6 +76,17 @@ export const generateLinkPreviewIfRequired = async(text: string, getUrlInfo: Mes
 		try {
 			const urlInfo = await getUrlInfo(url)
 			return urlInfo
+		} catch(error) { // ignore if fails
+			logger?.warn({ trace: error.stack }, 'url generation failed')
+		}
+	}
+}
+
+export const myGenerateLinkPreviewIfRequired = async(text: string, getUrlInfo: MessageGenerationOptions['getUrlInfo'], logger: MessageGenerationOptions['logger']) => {
+	const url = extractUrlFromText(text);
+	if(url) {
+		try {
+			return await myGetLinkPreview(url);
 		} catch(error) { // ignore if fails
 			logger?.warn({ trace: error.stack }, 'url generation failed')
 		}
@@ -328,7 +340,7 @@ export const generateWAMessageContent = async(
 
 		let urlInfo = message.linkPreview
 		if(typeof urlInfo === 'undefined') {
-			urlInfo = await generateLinkPreviewIfRequired(message.text, options.getUrlInfo, options.logger)
+			urlInfo = await myGenerateLinkPreviewIfRequired(message.text, options.getUrlInfo, options.logger)
 		}
 
 		if(urlInfo) {
