@@ -45,7 +45,7 @@ export const myGetLinkPreview = async(
         const html = response.data;
         const $ = cheerio.load(html);
   
-        let jpegThumbnail: Buffer | null = null;
+        let jpegThumbnail: Buffer | undefined = undefined;
 
         const canonicalUrl = $('meta[property="og:url"]').attr('content') || 
             $('link[rel="canonical"]').attr('href') ||
@@ -53,8 +53,7 @@ export const myGetLinkPreview = async(
 
         const title =
             $('meta[property="og:title"]').attr('content') ||
-            $('title').text() ||
-            undefined;
+            $('title').text();
   
         const description =
             $('meta[property="og:description"]').attr('content') ||
