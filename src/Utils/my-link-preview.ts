@@ -38,6 +38,7 @@ export const myGetLinkPreview = async(
         const response = await axios.get(url, {
             headers: { 
                 'Accept-Language': 'en-US,en;q=0.9',
+                'User-Agent': 'WhatsApp/2.23.10.77 A'
             },
             timeout: 8000,
         });
