@@ -45,8 +45,8 @@ export const processHistoryMessage = (item: proto.IHistorySync) => {
 			const msgs = chat.messages || []
 			delete chat.messages
 			delete chat.archived
-			delete chat.muteEndTime
-			delete chat.pinned
+			// delete chat.muteEndTime
+			// delete chat.pinned
 
 			for(const item of msgs) {
 				const message = item.message!
