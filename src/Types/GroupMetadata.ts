@@ -20,6 +20,7 @@ export interface GroupMetadata {
     subject: string
     /** group subject owner */
     subjectOwner?: string
+    subjectOwnerJid?: string
     /** group subject modification date */
     subjectTime?: number
     creation?: number
