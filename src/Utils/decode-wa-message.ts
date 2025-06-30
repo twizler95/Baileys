@@ -1,7 +1,17 @@
 import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto'
 import { SignalRepository, WAMessageKey } from '../Types'
-import { areJidsSameUser, BinaryNode, isJidBroadcast, isJidGroup, isJidMetaIa, isJidNewsletter, isJidStatusBroadcast, isJidUser, isLidUser } from '../WABinary'
+import {
+	areJidsSameUser,
+	BinaryNode,
+	isJidBroadcast,
+	isJidGroup,
+	isJidMetaIa,
+	isJidNewsletter,
+	isJidStatusBroadcast,
+	isJidUser,
+	isLidUser
+} from '../WABinary'
 import { unpadRandomMax16 } from './generics'
 import { ILogger } from './logger'
 
@@ -24,7 +34,14 @@ export const NACK_REASONS = {
 	DBOperationFailed: 552
 }
 
-type MessageType = 'chat' | 'peer_broadcast' | 'other_broadcast' | 'group' | 'direct_peer_status' | 'other_status' | 'newsletter'
+type MessageType =
+	| 'chat'
+	| 'peer_broadcast'
+	| 'other_broadcast'
+	| 'group'
+	| 'direct_peer_status'
+	| 'other_status'
+	| 'newsletter'
 
 /**
  * Decode the received node as a message.
@@ -101,7 +118,10 @@ export function decodeMessageNode(
 		remoteJid: chatId,
 		fromMe,
 		id: msgId,
-		participant
+		senderLid: stanza?.attrs?.sender_lid,
+		senderPn: stanza?.attrs?.sender_pn,
+		participant,
+		participantLid: stanza?.attrs?.participant_lid
 	}
 
 	const fullMessage: proto.IWebMessageInfo = {
