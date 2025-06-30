@@ -176,20 +176,28 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return botList
 	}
 
-	const onWhatsApp = async(...jids: string[]) => {
+	const onWhatsApp = async (...jids: string[]) => {
 		const usyncQuery = new USyncQuery()
 			.withContactProtocol()
 			.withLIDProtocol()
 
-		for(const jid of jids) {
-			const phone = `+${jid.replace('+', '').split('@')[0].split(':')[0]}`
-			usyncQuery.withUser(new USyncUser().withPhone(phone))
+		for (const jid of jids) {
+			const withAt = jid.includes('@')
+			const [user, domain] = jid.split('@')
+			if (domain === 'lid') {
+				usyncQuery.withUser(new USyncUser().withLid(jid))
+			} else if (domain === 's.whatsapp.net') {
+				usyncQuery.withUser(new USyncUser().withId(jid))
+			} else {
+				const phone = `+${jid.replace('+', '').split('@')[0].split(':')[0]}`
+				usyncQuery.withUser(new USyncUser().withPhone(phone))
+			}
 		}
 
 		const results = await sock.executeUSyncQuery(usyncQuery)
 
-		if(results) {
-			return results.list.filter((a) => !!a.contact).map(({ contact, id, lid }) => ({ jid: id, exists: contact, lid }))
+		if (results) {
+			return results.list.filter(a => !!a.contact).map(({ contact, id, lid }) => ({ jid: id, exists: contact, lid }))
 		}
 	}
 
