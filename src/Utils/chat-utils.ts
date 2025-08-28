@@ -97,9 +97,9 @@ const makeLtHashGenerator = ({ indexValueMap, hash }: Pick<LTHashState, 'hash' |
 		mix: ({ indexMac, valueMac, operation }: Mac) => {
 			const indexMacBase64 = Buffer.from(indexMac).toString('base64')
 			const prevOp = indexValueMap[indexMacBase64]
-			if(operation === proto.SyncdMutation.SyncdOperation.REMOVE) {
-				if(!prevOp) {
-					// throw new Boom('tried remove, but no previous op', { data: { indexMac, valueMac } })
+			if (operation === proto.SyncdMutation.SyncdOperation.REMOVE) {
+				if (!prevOp) {
+					//throw new Boom('tried remove, but no previous op', { data: { indexMac, valueMac } })
 				}
 
 				// remove from index value mac, since this mutation is erased

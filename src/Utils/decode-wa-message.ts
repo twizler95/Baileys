@@ -103,7 +103,14 @@ export function decodeMessageNode(stanza: BinaryNode, meId: string, meLid: strin
 		throw new Boom('Unknown message type', { data: stanza })
 	}
 
-	const fromMe = (isLidUser(from) ? isMeLid : isMe)((stanza.attrs.participant || stanza.attrs.from)!)
+	// this is from original head
+	// const fromMe = (isLidUser(from) ? isMeLid : isMe)((stanza.attrs.participant || stanza.attrs.from)!)
+
+	const fromMe = (
+		isLidUser(from) || (isJidGroup(from) && isLidUser(stanza.attrs.participant))? 
+			isMeLid : isMe
+	)(stanza.attrs.participant || stanza.attrs.from)
+
 	const pushname = stanza?.attrs?.notify
 
 	const key: WAMessageKey = {
