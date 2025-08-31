@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto'
 import { promises as fs } from 'fs'
 import { type Transform } from 'stream'
 import { proto } from '../../WAProto/index.js'
+import { myGetLinkPreview } from './my-link-preview'
 import { MEDIA_KEYS, URL_REGEX, WA_DEFAULT_EPHEMERAL } from '../Defaults'
 import type {
 	AnyMediaMessageContent,
@@ -87,6 +88,17 @@ export const generateLinkPreviewIfRequired = async (
 			return urlInfo
 		} catch (error: any) {
 			// ignore if fails
+			logger?.warn({ trace: error.stack }, 'url generation failed')
+		}
+	}
+}
+
+export const myGenerateLinkPreviewIfRequired = async(text: string, getUrlInfo: MessageGenerationOptions['getUrlInfo'], logger: MessageGenerationOptions['logger']) => {
+	const url = extractUrlFromText(text);
+	if(url) {
+		try {
+			return await myGetLinkPreview(url);
+		} catch(error) { // ignore if fails
 			logger?.warn({ trace: error.stack }, 'url generation failed')
 		}
 	}
@@ -207,7 +219,7 @@ export const prepareWAMessageMedia = async (
 		(mediaType === 'image' || mediaType === 'video') && typeof uploadData['jpegThumbnail'] === 'undefined'
 	const requiresWaveformProcessing = mediaType === 'audio' && uploadData.ptt === true
 	const requiresAudioBackground = options.backgroundColor && mediaType === 'audio' && uploadData.ptt === true
-	const requiresOriginalForSomeProcessing = requiresDurationComputation || requiresThumbnailComputation
+	const requiresOriginalForSomeProcessing = requiresDurationComputation || requiresThumbnailComputation || requiresWaveformProcessing
 	const { mediaKey, encFilePath, originalFilePath, fileEncSha256, fileSha256, fileLength } = await encryptedStream(
 		uploadData.media,
 		options.mediaTypeOverride || mediaType,
@@ -365,11 +377,11 @@ export const generateWAMessageContent = async (
 		const extContent = { text: message.text } as WATextMessage
 
 		let urlInfo = message.linkPreview
-		if (typeof urlInfo === 'undefined') {
-			urlInfo = await generateLinkPreviewIfRequired(message.text, options.getUrlInfo, options.logger)
+		if(typeof urlInfo === 'undefined') {
+			urlInfo = await myGenerateLinkPreviewIfRequired(message.text, options.getUrlInfo, options.logger)
 		}
 
-		if (urlInfo) {
+		if(urlInfo && urlInfo.title) {
 			extContent.matchedText = urlInfo['matched-text']
 			extContent.jpegThumbnail = urlInfo.jpegThumbnail
 			extContent.description = urlInfo.description
