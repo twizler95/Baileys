@@ -98,7 +98,7 @@ export const myGenerateLinkPreviewIfRequired = async(text: string, getUrlInfo: M
 	if(url) {
 		try {
 			return await myGetLinkPreview(url);
-		} catch(error) { // ignore if fails
+		} catch(error: any) { // ignore if fails
 			logger?.warn({ trace: error.stack }, 'url generation failed')
 		}
 	}

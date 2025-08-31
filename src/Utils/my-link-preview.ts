@@ -1,8 +1,11 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { 
+    type AxiosRequestConfig
+} from 'axios'
+import type { WAMediaUploadFunction, WAUrlInfo } from '../Types'
+import type { ILogger } from './logger'
+
 import * as cheerio from 'cheerio';
-import { WAMediaUploadFunction, WAUrlInfo } from '../Types';
 import { extractImageThumb, getHttpStream } from './messages-media'
-import { ILogger } from './logger'
 const THUMBNAIL_WIDTH_PX = 192
 
 const getCompressedJpegThumbnail = async(
@@ -77,7 +80,7 @@ export const myGetLinkPreview = async(
         if (image) {
             try {
                 jpegThumbnail = (await getCompressedJpegThumbnail(image, opts)).buffer
-            } catch(error) {
+            } catch(error: any) {
                 opts.logger?.debug(
                     { err: error.stack, url },
                     'error in generating thumbnail'
@@ -94,7 +97,7 @@ export const myGetLinkPreview = async(
             originalThumbnailUrl: image,
             jpegThumbnail,
         };
-    } catch (error) {
+    } catch (error: any) {
         opts.logger?.debug(
             { err: error.stack, url },
             'error in getting link preview'

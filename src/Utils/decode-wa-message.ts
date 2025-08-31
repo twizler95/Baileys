@@ -110,7 +110,7 @@ export function decodeMessageNode(stanza: BinaryNode, meId: string, meLid: strin
 	const fromMe = (
 		isLidUser(from) || (isJidGroup(from) && isLidUser(stanza.attrs.participant))? 
 			isMeLid : isMe
-	)(stanza.attrs.participant || stanza.attrs.from)
+	)((stanza.attrs.participant || stanza.attrs.from)!)
 	
 	const pushname = stanza?.attrs?.notify
 
