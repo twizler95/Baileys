@@ -46,6 +46,8 @@
     "libsignal": "git+https://github.com/whiskeysockets/libsignal-node",
     "lru-cache": "^11.1.0",
     "music-metadata": "^11.7.0",
+    "cheerio": "^1.0.0",
+    "lodash": "^4.17.21",
     "p-queue": "^9.0.0",
     "pino": "^9.6",
     "protobufjs": "^7.2.4",
