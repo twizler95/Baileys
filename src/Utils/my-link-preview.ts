@@ -1,6 +1,4 @@
-import axios, { 
-    type AxiosRequestConfig
-} from 'axios'
+import axios from 'axios'
 import type { WAMediaUploadFunction, WAUrlInfo } from '../Types'
 import type { ILogger } from './logger'
 
@@ -18,15 +16,15 @@ const getCompressedJpegThumbnail = async(
 }
 
 export type URLGenerationOptions = {
-    thumbnailWidth: number
-    fetchOpts: {
-        /** Timeout in ms */
-        timeout: number
-        proxyUrl?: string
-        headers?: AxiosRequestConfig<{}>['headers']
-    }
-    uploadImage?: WAMediaUploadFunction
-    logger?: ILogger
+	thumbnailWidth: number
+	fetchOpts: {
+		/** Timeout in ms */
+		timeout: number
+		proxyUrl?: string
+		headers?: HeadersInit
+	}
+	uploadImage?: WAMediaUploadFunction
+	logger?: ILogger
 }
 
 
@@ -47,7 +45,7 @@ export const myGetLinkPreview = async(
         });
   
         const html = response.data;
-        const $ = cheerio.load(html);
+        const $ = cheerio.load(html as string);
   
         let jpegThumbnail: Buffer | undefined = undefined;
 
