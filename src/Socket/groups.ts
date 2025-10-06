@@ -66,7 +66,7 @@ export const makeGroupsSocket = (config: SocketConfig) => {
 				data[meta.id] = meta
 			}
 		}
-
+		// TODO: properly parse LID / PN DATA
 		sock.ev.emit('groups.update', Object.values(data))
 
 		return data
@@ -344,6 +344,7 @@ export const extractGroupMetadata = (result: BinaryNode) => {
 		joinApprovalMode: !!getBinaryNodeChild(group, 'membership_approval_mode'),
 		memberAddMode,
 		participants: getBinaryNodeChildren(group, 'participant').map(({ attrs }) => {
+			// TODO: Store LID MAPPINGS
 			return {
 				id: attrs.jid!,
 				phoneNumber: isLidUser(attrs.jid) && isPnUser(attrs.phone_number) ? attrs.phone_number : undefined,
