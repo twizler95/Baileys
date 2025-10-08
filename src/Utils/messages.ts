@@ -40,6 +40,7 @@ import {
 	getRawMediaUploadData,
 	type MediaDownloadOptions
 } from './messages-media'
+import type { WAMessageKeyWithRecipient } from '../Socket/messages-send.js'
 
 type MediaUploadData = {
 	media: WAMediaUpload
@@ -894,16 +895,17 @@ export function getAggregateVotesInPollMessage(
 }
 
 /** Given a list of message keys, aggregates them by chat & sender. Useful for sending read receipts in bulk */
-export const aggregateMessageKeysNotFromMe = (keys: WAMessageKey[]) => {
-	const keyMap: { [id: string]: { jid: string; participant: string | undefined; messageIds: string[] } } = {}
-	for (const { remoteJid, id, participant, fromMe } of keys) {
+export const aggregateMessageKeysNotFromMe = (keys: WAMessageKeyWithRecipient[]) => {
+	const keyMap: { [id: string]: { jid: string; participant: string | undefined; recipient?: string; messageIds: string[] } } = {}
+	for (const { remoteJid, id, participant, fromMe, recipient } of keys) {
 		if (!fromMe) {
 			const uqKey = `${remoteJid}:${participant || ''}`
 			if (!keyMap[uqKey]) {
 				keyMap[uqKey] = {
 					jid: remoteJid!,
 					participant: participant!,
-					messageIds: []
+					messageIds: [],
+					recipient
 				}
 			}
 
