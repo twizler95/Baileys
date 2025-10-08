@@ -899,13 +899,13 @@ export const aggregateMessageKeysNotFromMe = (keys: WAMessageKeyWithRecipient[])
 	const keyMap: { [id: string]: { jid: string; participant: string | undefined; recipient?: string; messageIds: string[] } } = {}
 	for (const { remoteJid, id, participant, fromMe, recipient } of keys) {
 		if (!fromMe) {
-			const uqKey = `${remoteJid}:${participant || ''}`
+			const uqKey = `${remoteJid}:${recipient || participant || ''}`
 			if (!keyMap[uqKey]) {
 				keyMap[uqKey] = {
 					jid: remoteJid!,
 					participant: participant!,
-					messageIds: [],
-					recipient
+					recipient,
+					messageIds: []
 				}
 			}
 
