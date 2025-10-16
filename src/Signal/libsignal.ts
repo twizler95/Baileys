@@ -94,6 +94,7 @@ export function makeLibSignalRepository(
 
 		async encryptMessage({ jid, data }) {
 			const addr = jidToSignalProtocolAddress(jid)
+			logger.debug({ jid, addr }, 'device before cipher')
 			const cipher = new libsignal.SessionCipher(storage, addr)
 
 			// Use transaction to ensure atomicity
