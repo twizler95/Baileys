@@ -94,14 +94,19 @@ export function makeLibSignalRepository(
 
 		async encryptMessage({ jid, data }) {
 			const addr = jidToSignalProtocolAddress(jid)
-			logger.debug({ jid, addr }, 'device before cipher')
+			logger.debug({ jid, addr }, 'TESTTING device before cipher')
 			const cipher = new libsignal.SessionCipher(storage, addr)
 
 			// Use transaction to ensure atomicity
 			return parsedKeys.transaction(async () => {
-				const { type: sigType, body } = await cipher.encrypt(data)
-				const type = sigType === 3 ? 'pkmsg' : 'msg'
-				return { type, ciphertext: Buffer.from(body, 'binary') }
+				try {
+					const { type: sigType, body } = await cipher.encrypt(data)
+					const type = sigType === 3 ? 'pkmsg' : 'msg'
+					return { type, ciphertext: Buffer.from(body, 'binary') }
+				} catch (error) {	
+					logger.error({ jid, addr, error }, 'TESTTING failed to encrypt message')
+					throw error
+				}
 			}, jid)
 		},
 
