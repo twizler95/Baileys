@@ -441,6 +441,11 @@ export const encryptedStream = async (
 
 			sha256Plain.update(data)
 			onChunk(aes.update(data))
+
+			if (i % 2000 === 0) {
+				let end = Date.now();
+				console.log('encryptedStream', i, end - now);
+			}
 		}
 
 		let end = Date.now();
