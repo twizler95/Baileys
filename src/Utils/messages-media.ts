@@ -418,6 +418,7 @@ export const encryptedStream = async (
 
 	try {
 		for await (const data of stream) {
+			logger?.debug('encrypted data loop start')
 			fileLength += data.length
 
 			if (
@@ -432,25 +433,38 @@ export const encryptedStream = async (
 
 			if (originalFileStream) {
 				if (!originalFileStream.write(data)) {
+					logger?.debug('encrypted data loop drain -1')
 					await once(originalFileStream, 'drain')
+					logger?.debug('encrypted data loop drain +1')
 				}
 			}
 
+			logger?.debug('encrypted data loop sha256Plain.update')
 			sha256Plain.update(data)
+			logger?.debug('encrypted data loop onChunk')
 			onChunk(aes.update(data))
+			logger?.debug('encrypted data loop end')
 		}
 
+		logger?.debug('encrypted data aes.final')
 		onChunk(aes.final())
+		logger?.debug('encrypted data aes.final end')
 
 		const mac = hmac.digest().slice(0, 10)
+		logger?.debug('encrypted data hmac.digest')
 		sha256Enc.update(mac)
+		logger?.debug('encrypted data sha256Enc.update')
 
 		const fileSha256 = sha256Plain.digest()
+		logger?.debug('encrypted data sha256Plain.digest')
 		const fileEncSha256 = sha256Enc.digest()
+		logger?.debug('encrypted data sha256Enc.digest')
 
 		encFileWriteStream.write(mac)
+		logger?.debug('encrypted data mac')
 
 		encFileWriteStream.end()
+		logger?.debug('encrypted data end')
 		originalFileStream?.end?.()
 		stream.destroy()
 
