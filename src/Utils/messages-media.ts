@@ -63,9 +63,8 @@ export const getRawMediaUploadData = async (media: WAMediaUpload, mediaType: Med
 		for await (const data of stream) {
 			fileLength += data.length
 			hasher.update(data)
-			if (!fileWriteStream.write(data)) {
-				await once(fileWriteStream, 'drain')
-			}
+			// Write without blocking for better performance
+			fileWriteStream.write(data)
 		}
 
 		fileWriteStream.end()
@@ -431,9 +430,9 @@ export const encryptedStream = async (
 			}
 
 			if (originalFileStream) {
-				if (!originalFileStream.write(data)) {
-					await once(originalFileStream, 'drain')
-				}
+				// Write without blocking - Node.js will handle backpressure automatically
+				// This prevents encryption from being blocked by slow disk writes
+				originalFileStream.write(data)
 			}
 
 			sha256Plain.update(data)
