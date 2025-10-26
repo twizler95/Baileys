@@ -447,6 +447,7 @@ export const encryptedStream = async (
 			if (i % 2000 === 0) {
 				let end = Date.now();
 				console.log('encryptedStream', i, end - now);
+				console.log('Buffer size:', encFileWriteStream.writableLength);
 			}
 		}
 
