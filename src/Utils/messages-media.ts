@@ -414,6 +414,7 @@ export const encryptedStream = async (
 		sha256Enc.update(buff)
 		hmac.update(buff)
 		if (!encFileWriteStream.write(buff)) {
+			console.log('Draining');
 			await once(encFileWriteStream, 'drain')
 		}
 	}
@@ -421,6 +422,7 @@ export const encryptedStream = async (
 	try {
 		let i = 0;
 		let now = Date.now();
+		console.log('Buffer Size write', encFileWriteStream.writableLength);
 		for await (const data of stream) {
 			i++;
 			fileLength += data.length
@@ -444,10 +446,10 @@ export const encryptedStream = async (
 			sha256Plain.update(data)
 			await onChunk(aes.update(data))
 
-			if (i % 2000 === 0) {
+			if (i % 1000 === 0) {
 				let end = Date.now();
 				console.log('encryptedStream', i, end - now);
-				console.log('Buffer Size', encFileWriteStream.writableLength);
+				console.log('Buffer Size write', encFileWriteStream.writableLength);
 			}
 		}
 
