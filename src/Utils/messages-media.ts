@@ -414,9 +414,9 @@ export const encryptedStream = async (
 		sha256Enc.update(buff)
 		hmac.update(buff)
 		encFileWriteStream.write(buff)
-		// if (!encFileWriteStream.write(buff)) {
-		// 	await once(encFileWriteStream, 'drain')
-		// }
+		if (!encFileWriteStream.write(buff)) {
+			await once(encFileWriteStream, 'drain')
+		}
 	}
 
 	try {
