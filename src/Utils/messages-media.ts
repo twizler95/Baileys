@@ -461,6 +461,10 @@ export const encryptedStream = async (
 		encFileWriteStream.write(mac)
 		encFileWriteStream.end()
 		originalFileStream?.end?.()
+		if (encFileWriteStream) {
+			// Wait for the 'finish' event, which signifies that all data has been flushed to the underlying system.
+			await once(encFileWriteStream!, 'finish')
+		}
 		stream.destroy()
 
 		let end2 = Date.now();
