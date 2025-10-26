@@ -410,10 +410,12 @@ export const encryptedStream = async (
 	const sha256Plain = Crypto.createHash('sha256')
 	const sha256Enc = Crypto.createHash('sha256')
 
-	const onChunk = (buff: Buffer) => {
+	const onChunk = async (buff: Buffer) => {
 		sha256Enc.update(buff)
 		hmac.update(buff)
-		encFileWriteStream.write(buff)
+		if (!encFileWriteStream.write(buff)) {
+			await once(encFileWriteStream, 'drain')
+		}
 	}
 
 	try {
@@ -440,7 +442,7 @@ export const encryptedStream = async (
 			}
 
 			sha256Plain.update(data)
-			onChunk(aes.update(data))
+			await onChunk(aes.update(data))
 
 			if (i % 2000 === 0) {
 				let end = Date.now();
