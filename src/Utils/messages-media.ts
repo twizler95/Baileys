@@ -410,10 +410,12 @@ export const encryptedStream = async (
 	const sha256Plain = Crypto.createHash('sha256')
 	const sha256Enc = Crypto.createHash('sha256')
 
-	const onChunk = (buff: Buffer) => {
+	const onChunk = async (buff: Buffer) => {
 		sha256Enc.update(buff)
 		hmac.update(buff)
-		encFileWriteStream.write(buff)
+		if (!encFileWriteStream.write(buff)) {
+			await once(encFileWriteStream, 'drain')
+		}
 	}
 
 	try {
@@ -440,17 +442,18 @@ export const encryptedStream = async (
 			}
 
 			sha256Plain.update(data)
-			onChunk(aes.update(data))
+			await onChunk(aes.update(data))
 
 			if (i % 2000 === 0) {
 				let end = Date.now();
 				console.log('encryptedStream', i, end - now);
+				console.log('Buffer Size', encFileWriteStream.writableLength);
 			}
 		}
 
 		let end = Date.now();
 		console.log('totalEncryptedStream', i, end - now);
-		onChunk(aes.final())
+		await onChunk(aes.final())
 
 		const mac = hmac.digest().slice(0, 10)
 		sha256Enc.update(mac)
@@ -461,6 +464,10 @@ export const encryptedStream = async (
 		encFileWriteStream.write(mac)
 		encFileWriteStream.end()
 		originalFileStream?.end?.()
+		if (encFileWriteStream) {
+			// Wait for the 'finish' event, which signifies that all data has been flushed to the underlying system.
+			await once(encFileWriteStream!, 'finish')
+		}
 		stream.destroy()
 
 		let end2 = Date.now();
