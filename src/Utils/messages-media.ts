@@ -413,7 +413,6 @@ export const encryptedStream = async (
 	const onChunk = async (buff: Buffer) => {
 		sha256Enc.update(buff)
 		hmac.update(buff)
-		encFileWriteStream.write(buff)
 		if (!encFileWriteStream.write(buff)) {
 			await once(encFileWriteStream, 'drain')
 		}
