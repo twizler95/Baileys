@@ -618,7 +618,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		// Performance note: This transaction still includes expensive operations like group metadata
 		// fetching and device enumeration. Future optimization: move these outside transaction
 		// and only wrap the final state mutations (sender-key-memory, session updates)
-		await authState.keys.transaction(async () => {
+		const stanza = await authState.keys.transaction(async () => {
 			const mediaType = getMediaType(message)
 			if (mediaType) {
 				extraAttrs['mediatype'] = mediaType
@@ -632,7 +632,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					attrs: {},
 					content: bytes
 				})
-				const stanza: BinaryNode = {
+				const newsletterStanza: BinaryNode = {
 					tag: 'message',
 					attrs: {
 						to: jid,
@@ -643,8 +643,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					content: binaryNodeContent
 				}
 				logger.debug({ msgId }, `sending newsletter message to ${jid}`)
-				await sendNode(stanza)
-				return
+				await sendNode(newsletterStanza)
+				return null
 			}
 
 			if (normalizeMessageContent(message)?.pinInChatMessage) {
@@ -946,11 +946,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		}, meId)
 
 		// Performance fix: Network I/O outside transaction to reduce lock time
-		await sendNode(stanza)
+		if (stanza) {
+			await sendNode(stanza)
 
-		// Add message to retry cache if enabled (outside transaction)
-		if (messageRetryManager && !participant) {
-			messageRetryManager.addRecentMessage(destinationJid, msgId, message)
+			// Add message to retry cache if enabled (outside transaction)
+			if (messageRetryManager && !participant) {
+				messageRetryManager.addRecentMessage(destinationJid, msgId, message)
+			}
 		}
 
 		return msgId

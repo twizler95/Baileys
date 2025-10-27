@@ -233,7 +233,7 @@ const makeBufferData = (): BufferedEventData => {
 
 function append<E extends BufferableEvent>(
 	data: BufferedEventData,
-	historyCache: Set<string>,
+	historyCache: LRUCache<string, true>,
 	event: E,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	eventData: any,
