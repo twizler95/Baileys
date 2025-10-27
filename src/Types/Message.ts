@@ -144,7 +144,7 @@ export type EventMessageOptions = {
 	isCancelled?: boolean
 	isScheduleCall?: boolean
 	extraGuestsAllowed?: boolean
-	messageSecret?: Uint8Array<ArrayBufferLike>
+	messageSecret?: Uint8Array
 }
 
 type SharePhoneNumber = {
