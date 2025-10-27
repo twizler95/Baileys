@@ -66,17 +66,23 @@ export class LIDMappingStore {
 
 		this.logger.trace({ pairMap }, `Storing ${Object.keys(pairMap).length} pn mappings`)
 
+		// Performance fix: Batch all database writes into a single operation
 		await this.keys.transaction(async () => {
-			for (const [pnUser, lidUser] of Object.entries(pairMap)) {
-				await this.keys.set({
-					'lid-mapping': {
-						[pnUser]: lidUser,
-						[`${lidUser}_reverse`]: pnUser
-					}
-				})
+			const batchUpdate: { [key: string]: string } = {}
 
+			// Prepare all mappings in a single batch
+			for (const [pnUser, lidUser] of Object.entries(pairMap)) {
+				batchUpdate[pnUser] = lidUser
+				batchUpdate[`${lidUser}_reverse`] = pnUser
+
+				// Update cache immediately to ensure consistency
 				this.mappingCache.set(`pn:${pnUser}`, lidUser)
 				this.mappingCache.set(`lid:${lidUser}`, pnUser)
+			}
+
+			// Single database write for all mappings (reduces N writes to 1)
+			if (Object.keys(batchUpdate).length > 0) {
+				await this.keys.set({ 'lid-mapping': batchUpdate })
 			}
 		}, 'lid-mapping')
 	}
@@ -145,7 +151,8 @@ export class LIDMappingStore {
 		if (Object.keys(usyncFetch).length > 0) {
 			const result = await this.pnToLIDFunc?.(Object.keys(usyncFetch)) // this function already adds LIDs to mapping
 			if (result && result.length > 0) {
-				this.storeLIDPNMappings(result)
+				// Performance fix: Await storage to prevent memory leak and race conditions
+				await this.storeLIDPNMappings(result)
 				for (const pair of result) {
 					const pnDecoded = jidDecode(pair.pn)
 					const pnUser = pnDecoded?.user

@@ -615,6 +615,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			})
 		}
 
+		// Performance note: This transaction still includes expensive operations like group metadata
+		// fetching and device enumeration. Future optimization: move these outside transaction
+		// and only wrap the final state mutations (sender-key-memory, session updates)
 		await authState.keys.transaction(async () => {
 			const mediaType = getMediaType(message)
 			if (mediaType) {
@@ -938,13 +941,17 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 			logger.debug({ msgId }, `sending message to ${participants.length} devices`)
 
-			await sendNode(stanza)
-
-			// Add message to retry cache if enabled
-			if (messageRetryManager && !participant) {
-				messageRetryManager.addRecentMessage(destinationJid, msgId, message)
-			}
+			// Performance fix: Return stanza to send outside transaction
+			return stanza
 		}, meId)
+
+		// Performance fix: Network I/O outside transaction to reduce lock time
+		await sendNode(stanza)
+
+		// Add message to retry cache if enabled (outside transaction)
+		if (messageRetryManager && !participant) {
+			messageRetryManager.addRecentMessage(destinationJid, msgId, message)
+		}
 
 		return msgId
 	}

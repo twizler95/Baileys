@@ -1,4 +1,5 @@
 import EventEmitter from 'events'
+import { LRUCache } from 'lru-cache'
 import type {
 	BaileysEvent,
 	BaileysEventEmitter,
@@ -69,13 +70,16 @@ type BaileysBufferableEventEmitter = BaileysEventEmitter & {
  */
 export const makeEventBuffer = (logger: ILogger): BaileysBufferableEventEmitter => {
 	const ev = new EventEmitter()
-	const historyCache = new Set<string>()
+	// Performance fix: Use LRU cache instead of Set to prevent unbounded growth
+	const historyCache = new LRUCache<string, true>({
+		max: 10000, // Hard limit on cache size
+		updateAgeOnGet: false // Don't update on access, only on insert
+	})
 
 	let data = makeBufferData()
 	let isBuffering = false
 	let bufferTimeout: NodeJS.Timeout | null = null
 	let bufferCount = 0
-	const MAX_HISTORY_CACHE_SIZE = 10000 // Limit the history cache size to prevent memory bloat
 	const BUFFER_TIMEOUT_MS = 30000 // 30 seconds
 
 	// take the generic event and fire it as a baileys event
@@ -122,11 +126,8 @@ export const makeEventBuffer = (logger: ILogger): BaileysBufferableEventEmitter 
 			bufferTimeout = null
 		}
 
-		// Clear history cache if it exceeds the max size
-		if (historyCache.size > MAX_HISTORY_CACHE_SIZE) {
-			logger.debug({ cacheSize: historyCache.size }, 'Clearing history cache')
-			historyCache.clear()
-		}
+		// Performance fix: LRU cache automatically manages size, no manual clearing needed
+		// Cache will evict oldest entries when max size is reached
 
 		const newData = makeBufferData()
 		const chatUpdates = Object.values(data.chatUpdates)
@@ -249,7 +250,7 @@ function append<E extends BufferableEvent>(
 
 				if (!existingChat && !historyCache.has(id)) {
 					data.historySets.chats[id] = chat
-					historyCache.add(id)
+					historyCache.set(id, true)
 
 					absorbingChatUpdate(chat)
 				}
@@ -264,7 +265,7 @@ function append<E extends BufferableEvent>(
 					const hasAnyName = contact.notify || contact.name || contact.verifiedName
 					if (!historyCache.has(historyContactId) || hasAnyName) {
 						data.historySets.contacts[contact.id] = contact
-						historyCache.add(historyContactId)
+						historyCache.set(historyContactId, true)
 					}
 				}
 			}
@@ -274,7 +275,7 @@ function append<E extends BufferableEvent>(
 				const existingMsg = data.historySets.messages[key]
 				if (!existingMsg && !historyCache.has(key)) {
 					data.historySets.messages[key] = message
-					historyCache.add(key)
+					historyCache.set(key, true)
 				}
 			}
 
