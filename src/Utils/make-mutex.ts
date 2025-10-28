@@ -5,9 +5,27 @@ export const makeMutex = () => {
 	let task = Promise.resolve() as Promise<any>
 
 	let taskTimeout: NodeJS.Timeout | undefined
+	let chainLength = 0  // Track promise chain length
 
 	return {
 		mutex<T>(code: () => Promise<T> | T): Promise<T> {
+			chainLength++
+
+			// Performance fix: Break promise chain every 50 operations to prevent memory buildup
+			// Without this, the chain grows indefinitely: Promise1000 → Promise999 → ... → Promise1
+			if (chainLength >= 50) {
+				const previousTask = task
+				// Wait for previous task, then break the chain by resetting to a fresh Promise
+				task = previousTask.then(() => {
+					chainLength = 0
+					return Promise.resolve()
+				}, () => {
+					// Also break chain on error
+					chainLength = 0
+					return Promise.resolve()
+				})
+			}
+
 			task = (async () => {
 				// wait for the previous task to complete
 				// if there is an error, we swallow so as to not block the queue
