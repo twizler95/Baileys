@@ -1,3 +1,4 @@
+import { LRUCache } from 'lru-cache'
 import PQueue from 'p-queue'
 import type { SignalDataSet, SignalDataTypeMap, SignalKeyStore } from '../Types'
 import type { ILogger } from './logger'
@@ -6,7 +7,17 @@ import type { ILogger } from './logger'
  * Manages pre-key operations with proper concurrency control
  */
 export class PreKeyManager {
-	private readonly queues = new Map<string, PQueue>()
+	// Performance fix: Use LRU cache with TTL to prevent unbounded queue growth
+	private readonly queues = new LRUCache<string, PQueue>({
+		max: 50, // Maximum number of key type queues
+		ttl: 10 * 60 * 1000, // 10 minutes - clean up inactive queues
+		updateAgeOnGet: true,
+		ttlAutopurge: true,
+		dispose: (queue) => {
+			// Clean up queue when evicted
+			queue.clear()
+		}
+	})
 
 	constructor(
 		private readonly store: SignalKeyStore,
@@ -17,11 +28,13 @@ export class PreKeyManager {
 	 * Get or create a queue for a specific key type
 	 */
 	private getQueue(keyType: string): PQueue {
-		if (!this.queues.has(keyType)) {
-			this.queues.set(keyType, new PQueue({ concurrency: 1 }))
+		let queue = this.queues.get(keyType)
+		if (!queue) {
+			queue = new PQueue({ concurrency: 1 })
+			this.queues.set(keyType, queue)
 		}
 
-		return this.queues.get(keyType)!
+		return queue
 	}
 
 	/**
@@ -122,5 +135,13 @@ export class PreKeyManager {
 				}
 			}
 		})
+	}
+
+	/**
+	 * Performance fix: Clear all queues to free memory (useful for cleanup/testing)
+	 */
+	clearAllQueues(): void {
+		this.queues.clear()
+		this.logger.debug('Cleared all pre-key queues')
 	}
 }

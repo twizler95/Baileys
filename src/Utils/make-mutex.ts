@@ -1,3 +1,5 @@
+import { LRUCache } from 'lru-cache'
+
 export const makeMutex = () => {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let task = Promise.resolve() as Promise<any>
@@ -30,16 +32,28 @@ export const makeMutex = () => {
 
 export type Mutex = ReturnType<typeof makeMutex>
 
+/**
+ * Performance fix: Use LRU cache to prevent unbounded growth of mutex map
+ * Old mutexes for inactive users will be automatically evicted
+ */
 export const makeKeyedMutex = () => {
-	const map: { [id: string]: Mutex } = {}
+	// LRU cache with max 1000 mutexes, 30 minute TTL
+	const mutexCache = new LRUCache<string, Mutex>({
+		max: 1000, // Maximum number of concurrent mutexes
+		ttl: 30 * 60 * 1000, // 30 minutes - evict inactive mutexes
+		updateAgeOnGet: true, // Keep active mutexes longer
+		ttlAutopurge: true // Automatically clean up expired entries
+	})
 
 	return {
 		mutex<T>(key: string, task: () => Promise<T> | T): Promise<T> {
-			if (!map[key]) {
-				map[key] = makeMutex()
+			let keyMutex = mutexCache.get(key)
+			if (!keyMutex) {
+				keyMutex = makeMutex()
+				mutexCache.set(key, keyMutex)
 			}
 
-			return map[key].mutex(task)
+			return keyMutex.mutex(task)
 		}
 	}
 }
