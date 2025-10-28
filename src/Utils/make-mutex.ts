@@ -1,50 +1,39 @@
 import { LRUCache } from 'lru-cache'
 
 export const makeMutex = () => {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let task = Promise.resolve() as Promise<any>
-
-	let taskTimeout: NodeJS.Timeout | undefined
-	let chainLength = 0  // Track promise chain length
+	let current: Promise<void> | null = null
 
 	return {
-		mutex<T>(code: () => Promise<T> | T): Promise<T> {
-			chainLength++
+		async mutex<T>(code: () => Promise<T> | T, timeoutMs?: number): Promise<T> {
+			const prev = current
 
-			// Performance fix: Break promise chain every 50 operations to prevent memory buildup
-			// Without this, the chain grows indefinitely: Promise1000 → Promise999 → ... → Promise1
-			if (chainLength >= 50) {
-				const previousTask = task
-				// Wait for previous task, then break the chain by resetting to a fresh Promise
-				task = previousTask.then(() => {
-					chainLength = 0
-					return Promise.resolve()
-				}, () => {
-					// Also break chain on error
-					chainLength = 0
-					return Promise.resolve()
-				})
+			// Create a new "signal" promise to mark when this one is done
+			let release!: () => void
+			const next = new Promise<void>(resolve => (release = resolve))
+			current = next
+
+			if (prev) {
+				try {
+					await prev
+				} catch {
+					// swallow previous error
+				}
 			}
 
-			task = (async () => {
-				// wait for the previous task to complete
-				// if there is an error, we swallow so as to not block the queue
-				try {
-					await task
-				} catch {}
-
-				try {
-					// execute the current task
-					const result = await code()
-					return result
-				} finally {
-					clearTimeout(taskTimeout)
+			let timeout: NodeJS.Timeout | undefined
+			try {
+				if (timeoutMs) {
+					timeout = setTimeout(() => {
+						console.warn('Mutex task timed out after', timeoutMs, 'ms')
+					}, timeoutMs)
 				}
-			})()
-			// we replace the existing task, appending the new piece of execution to it
-			// so the next task will have to wait for this one to finish
-			return task
-		}
+
+				return await code()
+			} finally {
+				if (timeout) clearTimeout(timeout)
+				release() // allow next task to continue
+			}
+		},
 	}
 }
 
