@@ -1,6 +1,7 @@
 import { Mutex } from 'async-mutex'
 import { mkdir, readFile, stat, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { LRUCache } from 'lru-cache'
 import { proto } from '../../WAProto/index.js'
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from '../Types'
 import { initAuthCreds } from './auth-utils'
@@ -9,8 +10,13 @@ import { BufferJSON } from './generics'
 // We need to lock files due to the fact that we are using async functions to read and write files
 // https://github.com/WhiskeySockets/Baileys/issues/794
 // https://github.com/nodejs/node/issues/26338
-// Use a Map to store mutexes for each file path
-const fileLocks = new Map<string, Mutex>()
+// Performance fix: Use LRU cache instead of Map to prevent unbounded growth
+const fileLocks = new LRUCache<string, Mutex>({
+	max: 200, // Max 200 file locks (covers all auth files + some session files)
+	ttl: 5 * 60 * 1000, // 5 minutes - most files accessed frequently
+	updateAgeOnGet: true,
+	ttlAutopurge: true
+})
 
 // Get or create a mutex for a specific file path
 const getFileLock = (path: string): Mutex => {

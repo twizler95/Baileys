@@ -2,6 +2,7 @@ import NodeCache from '@cacheable/node-cache'
 import { AsyncLocalStorage } from 'async_hooks'
 import { Mutex } from 'async-mutex'
 import { randomBytes } from 'crypto'
+import { LRUCache } from 'lru-cache'
 import PQueue from 'p-queue'
 import { DEFAULT_CACHE_TTLS } from '../Defaults'
 import type {
@@ -118,9 +119,21 @@ export const addTransactionCapability = (
 ): SignalKeyStoreWithTransaction => {
 	const txStorage = new AsyncLocalStorage<TransactionContext>()
 
-	// Queues for concurrency control
-	const keyQueues = new Map<string, PQueue>()
-	const txMutexes = new Map<string, Mutex>()
+	// Performance fix: Use LRU cache to prevent unbounded growth
+	const keyQueues = new LRUCache<string, PQueue>({
+		max: 500,
+		ttl: 10 * 60 * 1000, // 10 minutes
+		updateAgeOnGet: true,
+		ttlAutopurge: true,
+		dispose: (queue) => queue.clear()
+	})
+
+	const txMutexes = new LRUCache<string, Mutex>({
+		max: 500,
+		ttl: 10 * 60 * 1000, // 10 minutes
+		updateAgeOnGet: true,
+		ttlAutopurge: true
+	})
 
 	// Pre-key manager for specialized operations
 	const preKeyManager = new PreKeyManager(state, logger)
@@ -129,22 +142,24 @@ export const addTransactionCapability = (
 	 * Get or create a queue for a specific key type
 	 */
 	function getQueue(key: string): PQueue {
-		if (!keyQueues.has(key)) {
-			keyQueues.set(key, new PQueue({ concurrency: 1 }))
+		let queue = keyQueues.get(key)
+		if (!queue) {
+			queue = new PQueue({ concurrency: 1 })
+			keyQueues.set(key, queue)
 		}
-
-		return keyQueues.get(key)!
+		return queue
 	}
 
 	/**
 	 * Get or create a transaction mutex
 	 */
 	function getTxMutex(key: string): Mutex {
-		if (!txMutexes.has(key)) {
-			txMutexes.set(key, new Mutex())
+		let mutex = txMutexes.get(key)
+		if (!mutex) {
+			mutex = new Mutex()
+			txMutexes.set(key, mutex)
 		}
-
-		return txMutexes.get(key)!
+		return mutex
 	}
 
 	/**
