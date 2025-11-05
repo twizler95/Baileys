@@ -2,6 +2,7 @@ import NodeCache from '@cacheable/node-cache'
 import { AsyncLocalStorage } from 'async_hooks'
 import { Mutex } from 'async-mutex'
 import { randomBytes } from 'crypto'
+import { LRUCache } from 'lru-cache'
 import PQueue from 'p-queue'
 import { DEFAULT_CACHE_TTLS } from '../Defaults'
 import type {
@@ -118,9 +119,19 @@ export const addTransactionCapability = (
 ): SignalKeyStoreWithTransaction => {
 	const txStorage = new AsyncLocalStorage<TransactionContext>()
 
-	// Queues for concurrency control
-	const keyQueues = new Map<string, PQueue>()
-	const txMutexes = new Map<string, Mutex>()
+	// Queues for concurrency control with LRU eviction to prevent unbounded growth
+	const keyQueues = new LRUCache<string, PQueue>({
+		max: 100, // Maximum number of concurrent queue keys
+		ttl: 60 * 60 * 1000, // 1 hour - evict inactive queues
+		updateAgeOnGet: true,
+		ttlAutopurge: true
+	})
+	const txMutexes = new LRUCache<string, Mutex>({
+		max: 100, // Maximum number of concurrent mutex keys
+		ttl: 60 * 60 * 1000, // 1 hour - evict inactive mutexes
+		updateAgeOnGet: true,
+		ttlAutopurge: true
+	})
 
 	// Pre-key manager for specialized operations
 	const preKeyManager = new PreKeyManager(state, logger)

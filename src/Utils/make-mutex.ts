@@ -28,7 +28,15 @@ export const makeMutex = () => {
 					}, timeoutMs)
 				}
 
-				return await code()
+				const result = await code()
+
+				// Memory optimization: Clear current if this is the last pending task
+				// This breaks the promise chain when the mutex becomes idle
+				if (current === next) {
+					current = null
+				}
+
+				return result
 			} finally {
 				if (timeout) clearTimeout(timeout)
 				release() // allow next task to continue

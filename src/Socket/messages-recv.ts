@@ -1388,7 +1388,16 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 		const nodes: OfflineNode[] = []
 		let isProcessing = false
 
+		// Memory optimization: Limit queue size to prevent unbounded growth
+		const MAX_OFFLINE_NODES = 10000
+
 		const enqueue = (type: MessageType, node: BinaryNode) => {
+			// Drop oldest nodes if queue is full to prevent memory exhaustion
+			if (nodes.length >= MAX_OFFLINE_NODES) {
+				const dropped = nodes.shift()
+				logger.warn({ type, droppedType: dropped?.type }, `Offline node queue full (${MAX_OFFLINE_NODES}), dropping oldest node`)
+			}
+
 			nodes.push({ type, node })
 
 			if (isProcessing) {

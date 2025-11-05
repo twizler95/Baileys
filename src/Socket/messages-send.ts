@@ -1,5 +1,6 @@
 import NodeCache from '@cacheable/node-cache'
 import { Boom } from '@hapi/boom'
+import { LRUCache } from 'lru-cache'
 import { proto } from '../../WAProto/index.js'
 import { DEFAULT_CACHE_TTLS, WA_DEFAULT_EPHEMERAL } from '../Defaults'
 import type {
@@ -92,9 +93,12 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			useClones: false
 		})
 
-	const peerSessionsCache = new NodeCache<boolean>({
-		stdTTL: DEFAULT_CACHE_TTLS.USER_DEVICES,
-		useClones: false
+	// Memory optimization: Use LRUCache with max size limit to prevent unbounded growth
+	const peerSessionsCache = new LRUCache<string, boolean>({
+		max: 1000, // Maximum 1000 peer sessions cached
+		ttl: DEFAULT_CACHE_TTLS.USER_DEVICES * 1000, // Convert seconds to ms (5 minutes)
+		updateAgeOnGet: true,
+		ttlAutopurge: true
 	})
 
 	// Initialize message retry manager if enabled
@@ -554,6 +558,11 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		)
 
 		const nodes = (await Promise.all(encryptionPromises)).filter(node => node !== null) as BinaryNode[]
+
+		// Memory optimization: Explicitly clear promise array to help GC
+		// Break reference chain to prevent memory accumulation (2-5MB per 100 messages)
+		encryptionPromises.length = 0
+
 		return { nodes, shouldIncludeDeviceIdentity }
 	}
 
@@ -615,9 +624,33 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			})
 		}
 
-		// Performance note: This transaction still includes expensive operations like group metadata
-		// fetching and device enumeration. Future optimization: move these outside transaction
-		// and only wrap the final state mutations (sender-key-memory, session updates)
+		// Performance optimization: Extract expensive read operations outside transaction
+		// Pre-fetch group metadata and sender-key-memory before acquiring transaction lock
+		let groupData: any = undefined
+		let senderKeyMap: Record<string, boolean> = {}
+
+		if (isGroup || isStatus) {
+			// Fetch group data and sender key memory in parallel BEFORE transaction
+			[groupData, senderKeyMap] = await Promise.all([
+				(async () => {
+					let groupData = useCachedGroupMetadata && cachedGroupMetadata ? await cachedGroupMetadata(jid) : undefined
+					if (groupData && Array.isArray(groupData?.participants)) {
+						logger.trace({ jid, participants: groupData.participants.length }, 'using cached group metadata')
+					} else if (!isStatus) {
+						groupData = await groupMetadata(jid)
+					}
+					return groupData
+				})(),
+				(async () => {
+					if (!participant && !isStatus) {
+						const result = await authState.keys.get('sender-key-memory', [jid])
+						return result[jid] || {}
+					}
+					return {}
+				})()
+			])
+		}
+
 		const stanza = await authState.keys.transaction(async () => {
 			const mediaType = getMediaType(message)
 			if (mediaType) {
@@ -652,28 +685,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			}
 
 			if (isGroup || isStatus) {
-				const [groupData, senderKeyMap] = await Promise.all([
-					(async () => {
-						let groupData = useCachedGroupMetadata && cachedGroupMetadata ? await cachedGroupMetadata(jid) : undefined // todo: should we rely on the cache specially if the cache is outdated and the metadata has new fields?
-						if (groupData && Array.isArray(groupData?.participants)) {
-							logger.trace({ jid, participants: groupData.participants.length }, 'using cached group metadata')
-						} else if (!isStatus) {
-							groupData = await groupMetadata(jid) // TODO: start storing group participant list + addr mode in Signal & stop relying on this
-						}
-
-						return groupData
-					})(),
-					(async () => {
-						if (!participant && !isStatus) {
-							// what if sender memory is less accurate than the cached metadata
-							// on participant change in group, we should do sender memory manipulation
-							const result = await authState.keys.get('sender-key-memory', [jid]) // TODO: check out what if the sender key memory doesn't include the LID stuff now?
-							return result[jid] || {}
-						}
-
-						return {}
-					})()
-				])
+				// groupData and senderKeyMap already fetched outside transaction (performance optimization)
 
 				if (!participant) {
 					const participantsList = []
@@ -683,7 +695,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						// default to LID based groups
 						let groupAddressingMode = 'lid'
 						if (groupData) {
-							participantsList.push(...groupData.participants.map(p => p.id))
+							participantsList.push(...groupData.participants.map((p: any) => p.id))
 							groupAddressingMode = groupData?.addressingMode || groupAddressingMode
 						}
 

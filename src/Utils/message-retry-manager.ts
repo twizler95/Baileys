@@ -179,9 +179,16 @@ export class MessageRetryManager {
 		this.cancelPendingPhoneRequest(messageId)
 
 		this.pendingPhoneRequests[messageId] = setTimeout(() => {
+			// Memory optimization: Always delete timeout reference, even if callback throws
 			delete this.pendingPhoneRequests[messageId]
 			this.statistics.phoneRequests++
-			callback()
+
+			// Wrap callback in try-catch to prevent unhandled exceptions
+			try {
+				callback()
+			} catch (error) {
+				this.logger.error({ error, messageId }, 'Error in phone request callback')
+			}
 		}, delay)
 
 		this.logger.debug(`Scheduled phone request for message ${messageId} with ${delay}ms delay`)
@@ -197,6 +204,25 @@ export class MessageRetryManager {
 			delete this.pendingPhoneRequests[messageId]
 			this.logger.debug(`Cancelled pending phone request for message ${messageId}`)
 		}
+	}
+
+	/**
+	 * Cleanup all pending phone requests and clear resources
+	 * Memory optimization: Prevents timeout leaks on manager destruction
+	 */
+	cleanup(): void {
+		// Clear all pending timeouts to prevent memory leaks
+		Object.keys(this.pendingPhoneRequests).forEach(messageId => {
+			clearTimeout(this.pendingPhoneRequests[messageId])
+		})
+		this.pendingPhoneRequests = {}
+
+		// Clear all caches
+		this.recentMessagesMap.clear()
+		this.sessionRecreateHistory.clear()
+		this.retryCounters.clear()
+
+		this.logger.debug('MessageRetryManager cleaned up')
 	}
 
 	private keyToString(key: RecentMessageKey): string {

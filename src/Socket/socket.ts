@@ -585,6 +585,15 @@ export const makeSocket = (config: SocketConfig) => {
 		ws.removeAllListeners('open')
 		ws.removeAllListeners('message')
 
+		// Memory optimization: Clean up dynamic TAG: and CB: event listeners
+		// These are created per-message and can accumulate on reconnection
+		ws.eventNames().forEach(event => {
+			const eventStr = String(event)
+			if (eventStr.startsWith('TAG:') || eventStr.startsWith('CB:') || eventStr.startsWith('frame')) {
+				ws.removeAllListeners(event)
+			}
+		})
+
 		if (!ws.isClosed && !ws.isClosing) {
 			try {
 				ws.close()
