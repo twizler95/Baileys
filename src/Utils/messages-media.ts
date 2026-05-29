@@ -421,7 +421,11 @@ export const encryptedStream = async (
 	}
 
 	try {
+		let i = 0;
+		let now = Date.now();
+		console.log('Buffer Size write', encFileWriteStream.writableLength);
 		for await (const data of stream) {
+			i++;
 			fileLength += data.length
 
 			if (
@@ -459,6 +463,10 @@ export const encryptedStream = async (
 
 		encFileWriteStream.end()
 		originalFileStream?.end?.()
+		if (encFileWriteStream) {
+			// Wait for the 'finish' event, which signifies that all data has been flushed to the underlying system.
+			await once(encFileWriteStream!, 'finish')
+		}
 		stream.destroy()
 
 		// Wait for write streams to fully flush to disk

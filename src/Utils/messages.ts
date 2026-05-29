@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto'
 import { promises as fs } from 'fs'
 import { type Transform } from 'stream'
 import { proto } from '../../WAProto/index.js'
+import { myGetLinkPreview } from './my-link-preview'
 import {
 	CALL_AUDIO_PREFIX,
 	CALL_VIDEO_PREFIX,
@@ -41,6 +42,7 @@ import {
 	type MediaDownloadOptions
 } from './messages-media'
 import { shouldIncludeReportingToken } from './reporting-utils'
+import type { WAMessageKeyWithRecipient } from '../Socket/messages-send.js'
 
 type ExtractByKey<T, K extends PropertyKey> = T extends Record<K, any> ? T : never
 type RequireKey<T, K extends keyof T> = T & {
@@ -48,6 +50,7 @@ type RequireKey<T, K extends keyof T> = T & {
 }
 
 type WithKey<T, K extends PropertyKey> = T extends unknown ? (K extends keyof T ? RequireKey<T, K> : never) : never
+
 
 type MediaUploadData = {
 	media: WAMediaUpload
@@ -101,6 +104,17 @@ export const generateLinkPreviewIfRequired = async (
 			return urlInfo
 		} catch (error: any) {
 			// ignore if fails
+			logger?.warn({ trace: error.stack }, 'url generation failed')
+		}
+	}
+}
+
+export const myGenerateLinkPreviewIfRequired = async(text: string, getUrlInfo: MessageGenerationOptions['getUrlInfo'], logger: MessageGenerationOptions['logger']) => {
+	const url = extractUrlFromText(text);
+	if(url) {
+		try {
+			return await myGetLinkPreview(url);
+		} catch(error: any) { // ignore if fails
 			logger?.warn({ trace: error.stack }, 'url generation failed')
 		}
 	}
@@ -226,7 +240,7 @@ export const prepareWAMessageMedia = async (
 	const requiresWaveformProcessing =
 		mediaType === 'audio' && uploadData.ptt === true && typeof uploadData.waveform === 'undefined'
 	const requiresAudioBackground = options.backgroundColor && mediaType === 'audio' && uploadData.ptt === true
-	const requiresOriginalForSomeProcessing = requiresDurationComputation || requiresThumbnailComputation
+	const requiresOriginalForSomeProcessing = requiresDurationComputation || requiresThumbnailComputation || requiresWaveformProcessing
 	const { mediaKey, encFilePath, originalFilePath, fileEncSha256, fileSha256, fileLength } = await encryptedStream(
 		uploadData.media,
 		options.mediaTypeOverride || mediaType,
@@ -401,11 +415,11 @@ export const generateWAMessageContent = async (
 		const extContent = { text: message.text } as WATextMessage
 
 		let urlInfo = message.linkPreview
-		if (typeof urlInfo === 'undefined') {
-			urlInfo = await generateLinkPreviewIfRequired(message.text, options.getUrlInfo, options.logger)
+		if(typeof urlInfo === 'undefined') {
+			urlInfo = await myGenerateLinkPreviewIfRequired(message.text, options.getUrlInfo, options.logger)
 		}
 
-		if (urlInfo) {
+		if(urlInfo && urlInfo.title) {
 			extContent.matchedText = urlInfo['matched-text']
 			extContent.jpegThumbnail = urlInfo.jpegThumbnail
 			extContent.description = urlInfo.description
@@ -1014,15 +1028,16 @@ export function getAggregateResponsesInEventMessage(
 }
 
 /** Given a list of message keys, aggregates them by chat & sender. Useful for sending read receipts in bulk */
-export const aggregateMessageKeysNotFromMe = (keys: WAMessageKey[]) => {
-	const keyMap: { [id: string]: { jid: string; participant: string | undefined; messageIds: string[] } } = {}
-	for (const { remoteJid, id, participant, fromMe } of keys) {
+export const aggregateMessageKeysNotFromMe = (keys: WAMessageKeyWithRecipient[]) => {
+	const keyMap: { [id: string]: { jid: string; participant: string | undefined; recipient?: string; messageIds: string[] } } = {}
+	for (const { remoteJid, id, participant, fromMe, recipient } of keys) {
 		if (!fromMe) {
-			const uqKey = `${remoteJid}:${participant || ''}`
+			const uqKey = `${remoteJid}:${recipient || participant || ''}`
 			if (!keyMap[uqKey]) {
 				keyMap[uqKey] = {
 					jid: remoteJid!,
 					participant: participant!,
+					recipient,
 					messageIds: []
 				}
 			}

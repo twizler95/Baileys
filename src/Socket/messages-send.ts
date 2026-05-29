@@ -70,6 +70,10 @@ import {
 import { USyncQuery, USyncUser } from '../WAUSync'
 import { makeNewsletterSocket } from './newsletter'
 
+export type WAMessageKeyWithRecipient = WAMessageKey & {
+	recipient?: string
+}
+
 export const makeMessagesSocket = (config: SocketConfig) => {
 	const {
 		logger,
@@ -167,7 +171,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		jid: string,
 		participant: string | undefined,
 		messageIds: string[],
-		type: MessageReceiptType
+		type: MessageReceiptType,
+		recipient?: string
 	) => {
 		if (!messageIds || messageIds.length === 0) {
 			throw new Boom('missing ids in receipt')
@@ -191,6 +196,10 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			node.attrs.to = jid
 			if (participant) {
 				node.attrs.participant = participant
+			}
+
+			if (recipient) {
+				node.attrs.recipient = recipient
 			}
 		}
 
@@ -217,15 +226,15 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 	}
 
 	/** Correctly bulk send receipts to multiple chats, participants */
-	const sendReceipts = async (keys: WAMessageKey[], type: MessageReceiptType) => {
+	const sendReceipts = async (keys: WAMessageKeyWithRecipient[], type: MessageReceiptType) => {
 		const recps = aggregateMessageKeysNotFromMe(keys)
-		for (const { jid, participant, messageIds } of recps) {
-			await sendReceipt(jid, participant, messageIds, type)
+		for (const { jid, participant, messageIds, recipient } of recps) {
+			await sendReceipt(jid, participant, messageIds, type, recipient)
 		}
 	}
 
 	/** Bulk read messages. Keys can be from different chats & participants */
-	const readMessages = async (keys: WAMessageKey[]) => {
+	const readMessages = async (keys: WAMessageKeyWithRecipient[]) => {
 		const privacySettings = await fetchPrivacySettings()
 		// based on privacy settings, we have to change the read type
 		const readType = privacySettings.readreceipts === 'all' ? 'read' : 'read-self'
